@@ -7,86 +7,66 @@ pub enum JsonError {
     #[error("trailing comma")]
     #[diagnostic(code(ferrite::trailing_comma))]
     TrailingComma(
-        #[source_code]
-        String,
-        #[label("remove this comma")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("remove this comma")] SourceSpan,
+        #[help] String,
     ),
     #[error("expected `,` or `]`")]
     #[diagnostic(code(ferrite::missing_comma))]
     MissingComma(
-        #[source_code]
-        String,
-        #[label("add comma here")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("add comma here")] SourceSpan,
+        #[help] String,
     ),
     #[error("expected `:`")]
     #[diagnostic(code(ferrite::missing_colon))]
     MissingColon(
-        #[source_code]
-        String,
-        #[label("add `:` here")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("add `:` here")] SourceSpan,
+        #[help] String,
     ),
     #[error("unexpected end of file")]
     #[diagnostic(code(ferrite::unexpected_eof))]
     UnexpectedEof(
-        #[source_code]
-        String,
-        #[label("file ended here")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("file ended here")] SourceSpan,
+        #[help] String,
     ),
     #[error("expected quoted string as object key")]
     #[diagnostic(code(ferrite::key_must_be_string))]
     KeyMustBeString(
-        #[source_code]
-        String,
-        #[label("add quotes around this")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("add quotes around this")] SourceSpan,
+        #[help] String,
     ),
     #[error("invalid escape sequence")]
     #[diagnostic(code(ferrite::invalid_escape))]
     InvalidEscape(
-        #[source_code]
-        String,
-        #[label("invalid escape")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("invalid escape")] SourceSpan,
+        #[help] String,
     ),
     #[error("invalid number")]
     #[diagnostic(code(ferrite::invalid_number))]
     InvalidNumber(
-        #[source_code]
-        String,
-        #[label("malformed number")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("malformed number")] SourceSpan,
+        #[help] String,
     ),
     #[error("invalid character in string")]
     #[diagnostic(code(ferrite::control_character))]
     InvalidControlCharacter(
-        #[source_code]
-        String,
-        #[label("escape this character")]
-        SourceSpan,
-        #[help]
-        String,
+        #[source_code] String,
+        #[label("escape this character")] SourceSpan,
+        #[help] String,
     ),
     #[error("{0}")]
     #[diagnostic(code(ferrite::syntax_error))]
-    SyntaxError(String, #[source_code] String, #[label("error here")] SourceSpan),
+    SyntaxError(
+        String,
+        #[source_code] String,
+        #[label("error here")] SourceSpan,
+    ),
 }
 
 struct ErrorContext<'a> {
@@ -111,7 +91,10 @@ impl<'a> ErrorContext<'a> {
     }
 
     fn current_line(&self) -> &'a str {
-        self.lines.get(self.line.saturating_sub(1)).copied().unwrap_or("")
+        self.lines
+            .get(self.line.saturating_sub(1))
+            .copied()
+            .unwrap_or("")
     }
 
     fn previous_line(&self) -> Option<&'a str> {
@@ -126,9 +109,21 @@ impl<'a> ErrorContext<'a> {
 
     fn trailing_comma_hint(&self) -> String {
         let trimmed = self.current_line().trim_end();
-        match trimmed.strip_suffix(",]").or_else(|| trimmed.strip_suffix(",}")) {
-            Some(prefix) => format!("change `{}` to `{}{}`", trimmed, prefix.trim_end(), if trimmed.ends_with(",]") { "]" } else { "}" }),
-            None if trimmed.ends_with(',') => format!("change `{}` to `{}`", trimmed, trimmed.trim_end_matches(',')),
+        match trimmed
+            .strip_suffix(",]")
+            .or_else(|| trimmed.strip_suffix(",}"))
+        {
+            Some(prefix) => format!(
+                "change `{}` to `{}{}`",
+                trimmed,
+                prefix.trim_end(),
+                if trimmed.ends_with(",]") { "]" } else { "}" }
+            ),
+            None if trimmed.ends_with(',') => format!(
+                "change `{}` to `{}`",
+                trimmed,
+                trimmed.trim_end_matches(',')
+            ),
             _ => "remove the trailing comma".to_string(),
         }
     }
@@ -137,7 +132,10 @@ impl<'a> ErrorContext<'a> {
         if let Some(line) = self.previous_line() {
             let trimmed = line.trim_end();
             if !trimmed.ends_with(',') && !trimmed.ends_with('[') && !trimmed.ends_with('{') {
-                return format!("add `,` after `{}`", trimmed.chars().take(32).collect::<String>());
+                return format!(
+                    "add `,` after `{}`",
+                    trimmed.chars().take(32).collect::<String>()
+                );
             }
         }
         "add comma between items".to_string()
@@ -159,16 +157,34 @@ impl<'a> ErrorContext<'a> {
             .unwrap_or("key")
             .trim_end_matches(':');
         let key = token.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
-        if key.is_empty() { "wrap the key in quotes".to_string() } else { format!("change `{}` to `\"{}\": `", key, key) }
+        if key.is_empty() {
+            "wrap the key in quotes".to_string()
+        } else {
+            format!("change `{}` to `\"{}\": `", key, key)
+        }
     }
 
     fn eof_hint(&self) -> String {
         let mut msgs = vec![];
-        let (open_brace, close_brace) = (self.src.chars().filter(|&c| c == '{').count(), self.src.chars().filter(|&c| c == '}').count());
-        let (open_arr, close_arr) = (self.src.chars().filter(|&c| c == '[').count(), self.src.chars().filter(|&c| c == ']').count());
-        if open_brace > close_brace { msgs.push(format!("{} missing `}}`", open_brace - close_brace)); }
-        if open_arr > close_arr { msgs.push(format!("{} missing `]`", open_arr - close_arr)); }
-        if msgs.is_empty() { "add missing closing bracket".to_string() } else { msgs.join(", ") }
+        let (open_brace, close_brace) = (
+            self.src.chars().filter(|&c| c == '{').count(),
+            self.src.chars().filter(|&c| c == '}').count(),
+        );
+        let (open_arr, close_arr) = (
+            self.src.chars().filter(|&c| c == '[').count(),
+            self.src.chars().filter(|&c| c == ']').count(),
+        );
+        if open_brace > close_brace {
+            msgs.push(format!("{} missing `}}`", open_brace - close_brace));
+        }
+        if open_arr > close_arr {
+            msgs.push(format!("{} missing `]`", open_arr - close_arr));
+        }
+        if msgs.is_empty() {
+            "add missing closing bracket".to_string()
+        } else {
+            msgs.join(", ")
+        }
     }
 
     fn escape_hint(&self) -> String {
@@ -178,7 +194,11 @@ impl<'a> ErrorContext<'a> {
                 if let Some(start) = line[..end].rfind('"') {
                     let value = &line[start + 1..end];
                     if value.contains(":\\") {
-                        return format!("change `\"{}\"` to `\"{}\"`", value, value.replace('\\', "\\\\"));
+                        return format!(
+                            "change `\"{}\"` to `\"{}\"`",
+                            value,
+                            value.replace('\\', "\\\\")
+                        );
                     }
                 }
             }
@@ -190,18 +210,31 @@ impl<'a> ErrorContext<'a> {
             "escape the backslash as \\\\"
         } else {
             "invalid escape - valid ones: \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX"
-        }.to_string()
+        }
+        .to_string()
     }
 
     fn number_hint(&self) -> String {
         let window = self.line_window(8);
-        let token: String = window.chars().take_while(|ch| ch.is_ascii_digit() || matches!(ch, '-' | '+' | '.')).collect();
-        if token.is_empty() { return "fix number format".to_string(); }
-        if token.starts_with('0') && token.len() > 1 && token.chars().nth(1).is_some_and(|c| c.is_ascii_digit()) {
+        let token: String = window
+            .chars()
+            .take_while(|ch| ch.is_ascii_digit() || matches!(ch, '-' | '+' | '.'))
+            .collect();
+        if token.is_empty() {
+            return "fix number format".to_string();
+        }
+        if token.starts_with('0')
+            && token.len() > 1
+            && token.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
+        {
             return format!("change `{}` to `{}`", token, token.trim_start_matches('0'));
         }
-        if token.ends_with('.') { return format!("change `{}` to `{}0`", token, token); }
-        if let Some(stripped) = token.strip_prefix('+') { return format!("change `{}` to `{}`", token, stripped); }
+        if token.ends_with('.') {
+            return format!("change `{}` to `{}0`", token, token);
+        }
+        if let Some(stripped) = token.strip_prefix('+') {
+            return format!("change `{}` to `{}`", token, stripped);
+        }
         "fix number format".to_string()
     }
 
@@ -243,7 +276,11 @@ impl<'a> ErrorContext<'a> {
     }
 }
 
-pub fn validate_json(content: &str, _filename: String, _context_lines: usize) -> miette::Result<()> {
+pub fn validate_json(
+    content: &str,
+    _filename: String,
+    _context_lines: usize,
+) -> miette::Result<()> {
     serde_json::from_str::<serde_json::Value>(content)
         .map(|_| ())
         .map_err(|err| {
@@ -255,7 +292,7 @@ pub fn validate_json(content: &str, _filename: String, _context_lines: usize) ->
 fn map_error(err: serde_json::Error, ctx: &ErrorContext<'_>) -> JsonError {
     let lower = err.to_string().to_ascii_lowercase();
     let (src, span) = (ctx.src.to_owned(), ctx.span);
-    
+
     if lower.contains("trailing comma") || ctx.is_trailing_comma() {
         JsonError::TrailingComma(src, span, ctx.trailing_comma_hint())
     } else if lower.contains("expected") && lower.contains("comma") {
@@ -265,7 +302,11 @@ fn map_error(err: serde_json::Error, ctx: &ErrorContext<'_>) -> JsonError {
     } else if lower.contains("expected") && lower.contains("colon") {
         JsonError::MissingColon(src, span, ctx.colon_hint())
     } else if lower.contains("control character") {
-        JsonError::InvalidControlCharacter(src, span, "replace tabs/newlines with \\t or \\n".to_string())
+        JsonError::InvalidControlCharacter(
+            src,
+            span,
+            "replace tabs/newlines with \\t or \\n".to_string(),
+        )
     } else if lower.contains("escape") {
         JsonError::InvalidEscape(src, span, ctx.escape_hint())
     } else if lower.contains("number") {

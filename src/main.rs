@@ -24,7 +24,11 @@ fn main() -> Result<()> {
     let content = fs::read_to_string(&cli.file)
         .into_diagnostic()
         .wrap_err_with(|| format!("Failed to read file '{}'", cli.file.display()))?;
-    validate_json(&content, cli.file.to_string_lossy().to_string(), cli.context)?;
+    validate_json(
+        &content,
+        cli.file.to_string_lossy().to_string(),
+        cli.context,
+    )?;
     println!("{} is valid!", cli.file.display());
     Ok(())
 }
