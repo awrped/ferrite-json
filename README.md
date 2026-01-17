@@ -1,4 +1,4 @@
-# ferrite
+# ferrite-json
 
 humans make errors, so we should show it to them, so it can be fixed.
 
