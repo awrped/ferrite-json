@@ -3,9 +3,7 @@ use miette::{Context, IntoDiagnostic, Result};
 use std::fs;
 use std::path::PathBuf;
 
-mod validator;
-
-use validator::validate_json;
+use ferrite::validate_json;
 
 #[derive(Parser)]
 #[command(name = "ferrite")]

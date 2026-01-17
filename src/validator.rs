@@ -276,6 +276,16 @@ impl<'a> ErrorContext<'a> {
     }
 }
 
+/// validate json content and return errors with diagnostics
+///
+/// # args
+/// * `content` - the json content to validate
+/// * `_filename` - the filename (for error reporting)
+/// * `_context_lines` - number of context lines to show (reserved for future use)
+///
+/// # returns
+/// * `Ok(())` if the json is valid
+/// * `Err(miette::Report)` with diagnostics if invalid
 pub fn validate_json(
     content: &str,
     _filename: String,
