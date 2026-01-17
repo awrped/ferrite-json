@@ -1,5 +1,5 @@
 [package]
-name = "ferrite"
+name = "ferrite-json"
 version = "0.1.0"
 edition = "2021"
 authors = ["awrped"]
@@ -17,7 +17,7 @@ miette = { version = "7.0", features = ["fancy"] }
 thiserror = "2.0.17"
 clap = { version = "4.5", features = ["derive"] }
 [lib]
-name = "ferrite"
+name = "ferrite_json"
 path = "src/lib.rs"
 [[bin]]
 name = "ferrite"
