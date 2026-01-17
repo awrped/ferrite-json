@@ -1,0 +1,6 @@
+{
+  "name": "John Doe",
+  "description": "A line with
+a newline in it",
+  "age": 30
+}
